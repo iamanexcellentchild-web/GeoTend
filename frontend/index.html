@@ -1,31 +1,1127 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="Smart location-based attendance tracking system. Built by The Game Changers" />
-    <meta name="theme-color" content="#14b8a6" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="GeoTend" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="color-scheme" content="light dark" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <link rel="apple-touch-icon" href="/logo.svg" />
-    <link rel="shortcut icon" href="/logo.svg" />
-    <title>GeoTend - Attendance Experience</title>
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        background: #0f172a;
-        color: #ffffff;
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GeoTend — Verified Attendance</title>
+<meta name="description" content="GPS-verified, QR-authenticated attendance for UNILAG classes. Runs fully offline, no backend." />
+<meta name="theme-color" content="#0B1730" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self';">
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/favicon.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+<style>
+  :root{
+    --ink:#081227;
+    --surface:#0F1E3D;
+    --surface-2:#132650;
+    --line:rgba(255,255,255,0.09);
+    --primary:#2F6BFF;
+    --primary-2:#1B4DE0;
+    --sky:#57C7FF;
+    --success:#17C98B;
+    --warn:#FFB020;
+    --danger:#FF5C6C;
+    --paper:#F4F7FC;
+    --paper-2:#E8EEF9;
+    --ink-text:#0B1730;
+    --slate:#5B6B8C;
+    --slate-soft:#8B98B4;
+    --white:#FFFFFF;
+    --r-lg:24px;
+    --r-md:16px;
+    --r-sm:10px;
+    --display:'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --body:'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:var(--body); background:var(--ink); color:var(--white);
+    overscroll-behavior:none; -webkit-user-select:none; user-select:none;
+  }
+  input, textarea{-webkit-user-select:text; user-select:text;}
+  button{font-family:inherit; cursor:pointer;}
+  .app{position:relative; max-width:480px; margin:0 auto; min-height:100vh; min-height:100dvh; background:var(--ink); overflow:hidden;}
+
+  .screen{position:absolute; inset:0; display:none; flex-direction:column;}
+  .screen.active{display:flex;}
+  .fade-in{animation:fadeIn .45s ease both;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  }
+
+  /* ---------- shared bits ---------- */
+  .radar{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;}
+  .radar span{position:absolute; border:1px solid rgba(87,199,255,0.28); border-radius:50%; animation:pulse 3.6s ease-out infinite;}
+  .radar span:nth-child(1){width:120px; height:120px; animation-delay:0s;}
+  .radar span:nth-child(2){width:120px; height:120px; animation-delay:1.2s;}
+  .radar span:nth-child(3){width:120px; height:120px; animation-delay:2.4s;}
+  @keyframes pulse{
+    0%{width:100px; height:100px; opacity:.65;}
+    100%{width:420px; height:420px; opacity:0;}
+  }
+
+  .brandmark{display:flex; align-items:center; justify-content:center; gap:14px;}
+  .brandmark img.gt{width:76px; height:76px; border-radius:20px; box-shadow:0 12px 30px rgba(47,107,255,.35);}
+  .brandmark .divider{width:1px; height:34px; background:var(--line);}
+  .brandmark img.unilag{width:44px; height:44px; background:#fff; border-radius:10px; padding:4px;}
+
+  /* ---------- LANDING ---------- */
+  #screen-landing{justify-content:space-between; padding:56px 28px 40px;}
+  .landing-top{position:relative; flex:1; display:flex; align-items:center; justify-content:center;}
+  .landing-word{margin-top:26px; text-align:center;}
+  .landing-word h1{font-family:var(--display); font-size:32px; letter-spacing:.5px; margin:18px 0 0; font-weight:700;}
+  .landing-word h1 .accent{color:var(--sky);}
+  .landing-word p.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:3px; color:var(--slate-soft); text-transform:uppercase; margin:0;}
+  .landing-copy{text-align:center; color:var(--slate-soft); font-size:14.5px; line-height:1.6; margin:14px auto 0; max-width:320px;}
+  .landing-tags{display:flex; gap:8px; justify-content:center; margin-top:20px; flex-wrap:wrap;}
+  .tag{font-family:var(--mono); font-size:11px; letter-spacing:.5px; padding:6px 10px; border:1px solid var(--line); border-radius:100px; color:var(--slate-soft);}
+  .landing-bottom{display:flex; flex-direction:column; gap:12px;}
+  .btn-primary{
+    background:linear-gradient(135deg, var(--primary), var(--sky)); color:#fff; border:none;
+    padding:16px; border-radius:100px; font-size:15.5px; font-weight:600; letter-spacing:.2px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    box-shadow:0 10px 24px rgba(47,107,255,.35);
+  }
+  .btn-primary:active{transform:scale(.98);}
+  .btn-ghost{
+    background:transparent; color:var(--slate-soft); border:1px solid var(--line);
+    padding:14px; border-radius:100px; font-size:14px; font-weight:500;
+  }
+  .foot-note{text-align:center; font-size:11.5px; color:var(--slate-soft); margin-top:6px; font-family:var(--mono);}
+
+  /* ---------- ONBOARDING ---------- */
+  #screen-onboarding{padding:26px 24px 32px; justify-content:space-between;}
+  .ob-top{display:flex; align-items:center; justify-content:space-between;}
+  .ob-brand{display:flex; align-items:center; gap:8px; font-family:var(--display); font-weight:600; font-size:14px; letter-spacing:.3px;}
+  .ob-brand img{width:22px; height:22px; border-radius:6px;}
+  .skip-btn{background:none; border:none; color:var(--slate-soft); font-size:13px; font-family:var(--mono);}
+
+  .progress-ring{display:flex; gap:6px; margin:26px 0 6px;}
+  .seg{flex:1; height:4px; border-radius:4px; background:var(--line); overflow:hidden; position:relative;}
+  .seg .fill{position:absolute; inset:0; background:linear-gradient(90deg,var(--primary),var(--sky)); width:0%; border-radius:4px; transition:width .35s ease;}
+  .seg.done .fill{width:100%;}
+  .step-label{font-family:var(--mono); font-size:11px; letter-spacing:2px; color:var(--sky); text-transform:uppercase; margin-top:14px;}
+
+  .ob-card-wrap{flex:1; display:flex; align-items:center; margin:18px 0;}
+  .ob-card{width:100%;}
+  .ob-icon{width:64px; height:64px; border-radius:18px; background:var(--surface-2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; margin-bottom:22px;}
+  .ob-card h2{font-family:var(--display); font-size:26px; line-height:1.25; margin:0 0 12px; font-weight:700;}
+  .ob-card p{color:var(--slate-soft); font-size:15px; line-height:1.65; margin:0;}
+
+  .ob-bottom{display:flex; align-items:center; gap:14px;}
+  .dots{display:flex; gap:6px; flex:1;}
+  .dots i{width:6px; height:6px; border-radius:50%; background:var(--line); display:block;}
+  .dots i.on{background:var(--sky); width:18px; border-radius:4px;}
+  .next-btn{
+    width:56px; height:56px; border-radius:50%; border:none; background:linear-gradient(135deg,var(--primary),var(--sky));
+    color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 24px rgba(47,107,255,.35); flex-shrink:0;
+  }
+  .next-btn.wide{width:auto; border-radius:100px; padding:0 22px; gap:8px; font-weight:600; font-size:14.5px;}
+
+  /* verifying overlay */
+  .verify-overlay{position:absolute; inset:0; background:rgba(8,18,39,.94); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; flex-direction:column; opacity:0; pointer-events:none; transition:opacity .3s ease; z-index:20;}
+  .verify-overlay.show{opacity:1; pointer-events:all;}
+  .spinner-ring{width:64px; height:64px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--sky); animation:spin 1s linear infinite; margin-bottom:20px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .verify-text{font-family:var(--mono); font-size:12.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--slate-soft);}
+  .verify-bar{width:180px; height:3px; background:var(--line); border-radius:4px; margin-top:16px; overflow:hidden;}
+  .verify-bar .fill{height:100%; width:0%; background:linear-gradient(90deg,var(--primary),var(--sky)); border-radius:4px;}
+  .verify-bar .fill.animate{animation:fillbar 5s linear forwards;}
+  @keyframes fillbar{to{width:100%;}}
+
+  /* ---------- LOCK / PIN ---------- */
+  #screen-lock{padding:56px 28px 40px; align-items:center; justify-content:center; text-align:center;}
+  .lock-icon{width:64px; height:64px; border-radius:20px; background:var(--surface-2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; margin:0 auto 22px;}
+  #screen-lock h2{font-family:var(--display); font-size:22px; margin:0 0 8px;}
+  #screen-lock p.sub{color:var(--slate-soft); font-size:13.5px; line-height:1.6; margin:0 0 26px; max-width:280px;}
+  .pin-dots{display:flex; gap:14px; justify-content:center; margin-bottom:28px;}
+  .pin-dots i{width:14px; height:14px; border-radius:50%; border:1.5px solid var(--slate-soft); display:block; transition:.2s;}
+  .pin-dots i.filled{background:var(--sky); border-color:var(--sky);}
+  .keypad{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; width:100%; max-width:280px;}
+  .key{background:var(--surface-2); border:1px solid var(--line); color:#fff; font-size:19px; font-family:var(--display); border-radius:16px; padding:16px 0;}
+  .key:active{background:var(--surface);}
+  .key.ghost{background:transparent; border:none; color:var(--slate-soft); font-size:13px;}
+  .lock-error{color:var(--danger); font-size:12.5px; font-family:var(--mono); height:16px; margin-bottom:6px;}
+
+  /* ---------- AUTH (login / register) ---------- */
+  #screen-auth{padding:28px 24px 24px;}
+  .auth-brand{display:flex; align-items:center; gap:10px; margin-bottom:20px;}
+  .auth-brand img{width:30px; height:30px; border-radius:8px;}
+  .auth-brand span{font-family:var(--display); font-weight:600; font-size:15px;}
+  .auth-tabs{display:flex; background:var(--surface-2); border:1px solid var(--line); border-radius:100px; padding:4px; margin-bottom:22px;}
+  .auth-tab{flex:1; text-align:center; padding:10px 0; border-radius:100px; font-size:13.5px; font-weight:600; color:var(--slate-soft); background:none; border:none; font-family:var(--body);}
+  .auth-tab.active{background:linear-gradient(135deg,var(--primary),var(--sky)); color:#fff;}
+  .auth-form{display:flex; flex-direction:column; gap:14px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{font-family:var(--mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--slate-soft);}
+  .field input{background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:13px 14px; color:#fff; font-size:14.5px; font-family:var(--body);}
+  .field input:focus{outline:none; border-color:var(--sky);}
+  .field-hint{font-size:11px; color:var(--slate-soft); font-family:var(--mono);}
+  .field-hint.err{color:var(--danger);}
+  .role-toggle{display:flex; gap:10px;}
+  .role-opt{flex:1; text-align:center; padding:12px 0; border-radius:12px; border:1px solid var(--line); background:var(--surface-2); color:var(--slate-soft); font-size:13px; font-weight:600;}
+  .role-opt.on{border-color:var(--sky); color:#fff; background:rgba(87,199,255,.12);}
+  .auth-error{color:var(--danger); font-size:12.5px; font-family:var(--mono); min-height:16px;}
+  .auth-submit{margin-top:4px;}
+  .auth-foot{text-align:center; font-size:11.5px; color:var(--slate-soft); margin-top:18px; font-family:var(--mono); line-height:1.6;}
+  .btn-primary.loading{opacity:.7; pointer-events:none;}
+
+  /* ---------- VERIFY EMAIL ---------- */
+  #screen-verify{padding:56px 28px 40px; align-items:center; justify-content:center; text-align:center;}
+  .verify-mail-icon{width:64px; height:64px; border-radius:20px; background:var(--surface-2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; margin:0 auto 22px;}
+  #screen-verify h2{font-family:var(--display); font-size:21px; margin:0 0 10px;}
+  #screen-verify p.sub{color:var(--slate-soft); font-size:13.5px; line-height:1.65; margin:0 0 8px; max-width:290px;}
+  #screen-verify .email-chip{font-family:var(--mono); color:var(--sky); font-size:12.5px;}
+  .dev-box{margin-top:26px; border:1px dashed var(--line); border-radius:14px; padding:14px; max-width:290px;}
+  .dev-box p{font-family:var(--mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--slate-soft); margin:0 0 10px;}
+
+  /* ---------- APP DASHBOARD ---------- */
+  #screen-app{background:var(--paper); color:var(--ink-text);}
+  .app-header{display:flex; align-items:center; justify-content:space-between; padding:20px 20px 14px; background:var(--ink); color:#fff; border-radius:0 0 24px 24px;}
+  .app-header .who{display:flex; align-items:center; gap:10px;}
+  .app-header img{width:32px; height:32px; border-radius:9px;}
+  .app-header .name{font-family:var(--display); font-weight:600; font-size:15px;}
+  .app-header .role{font-size:11px; color:var(--slate-soft); font-family:var(--mono);}
+  .icon-btn{width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,.08); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:#fff;}
+
+  .app-body{flex:1; overflow-y:auto; padding:18px 18px 30px; display:flex; flex-direction:column; gap:16px;}
+  .card{background:#fff; border-radius:var(--r-lg); padding:20px; box-shadow:0 6px 20px rgba(15,30,60,.06); border:1px solid var(--paper-2);}
+  .card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .card-title{font-family:var(--display); font-weight:600; font-size:15px;}
+  .pill{font-family:var(--mono); font-size:10.5px; padding:4px 10px; border-radius:100px; letter-spacing:.5px; text-transform:uppercase; font-weight:600;}
+  .pill.idle{background:var(--paper-2); color:var(--slate);}
+  .pill.ok{background:rgba(23,201,139,.12); color:#0F9D6E;}
+  .pill.warn{background:rgba(255,176,32,.14); color:#B87400;}
+  .pill.bad{background:rgba(255,92,108,.12); color:#D6394A;}
+
+  .geo-row{display:flex; justify-content:space-between; font-size:13px; color:var(--slate); padding:6px 0; border-top:1px dashed var(--paper-2);}
+  .geo-row span:last-child{font-family:var(--mono); color:var(--ink-text); font-weight:500;}
+  .btn-small{width:100%; margin-top:14px; background:var(--ink-text); color:#fff; border:none; padding:12px; border-radius:100px; font-size:13.5px; font-weight:600;}
+  .btn-small:disabled{opacity:.5;}
+  .btn-small.check-in{background:linear-gradient(135deg,var(--primary),var(--sky));}
+
+  .qr-wrap{display:flex; flex-direction:column; align-items:center; gap:10px;}
+  #qr-box{width:150px; height:150px; padding:8px; background:#fff; border:1px solid var(--paper-2); border-radius:12px;}
+  .qr-meta{font-family:var(--mono); font-size:11px; color:var(--slate); text-align:center;}
+  .qr-countdown{width:100%; height:4px; background:var(--paper-2); border-radius:4px; overflow:hidden; margin-top:6px;}
+  .qr-countdown .fill{height:100%; background:linear-gradient(90deg,var(--sky),var(--primary));}
+
+  .log-item{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px dashed var(--paper-2); font-size:13px;}
+  .log-item:first-child{border-top:none;}
+  .log-item .t{font-family:var(--mono); color:var(--slate); font-size:11.5px;}
+  .log-empty{color:var(--slate-soft); font-size:13px; text-align:center; padding:10px 0;}
+
+  .sec-note{display:flex; gap:10px; align-items:flex-start; background:var(--paper-2); border-radius:var(--r-md); padding:14px; font-size:12px; color:var(--slate); line-height:1.55;}
+  .reset-link{background:none; border:none; color:var(--danger); font-family:var(--mono); font-size:11.5px; text-decoration:underline; padding:0;}
+
+  ::-webkit-scrollbar{width:0;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ============ LANDING / FRONT PAGE ============ -->
+  <section class="screen active" id="screen-landing">
+    <div class="landing-top">
+      <div class="radar"><span></span><span></span><span></span></div>
+      <div class="landing-word">
+        <div class="brandmark">
+          <img class="gt" src="icons/icon-192.png" alt="GeoTend logo" />
+          <div class="divider"></div>
+          <img class="unilag" src="icons/unilag-logo.png" alt="University of Lagos logo" />
+        </div>
+        <p class="eyebrow">University of Lagos</p>
+        <h1>Geo<span class="accent">Tend</span></h1>
+        <p class="landing-copy">Attendance confirmed by where you are, not who signs for you. GPS geofencing meets a rotating QR check-in.</p>
+        <div class="landing-tags">
+          <span class="tag">GPS-VERIFIED</span>
+          <span class="tag">QR ROTATING TOKEN</span>
+          <span class="tag">ON-DEVICE ONLY</span>
+        </div>
+      </div>
+    </div>
+    <div class="landing-bottom">
+      <button class="btn-primary" id="btn-get-started">Get started →</button>
+      <button class="btn-ghost" id="btn-skip-onboarding">I've used GeoTend before</button>
+      <p class="foot-note">NO BACKEND · DATA ENCRYPTED ON THIS DEVICE</p>
+    </div>
+  </section>
+
+  <!-- ============ ONBOARDING (interactive, 5 cards) ============ -->
+  <section class="screen" id="screen-onboarding">
+    <div class="ob-top">
+      <div class="ob-brand"><img src="icons/icon-192.png" alt="" /> GeoTend</div>
+      <button class="skip-btn" id="btn-skip-2">Skip</button>
+    </div>
+
+    <div class="progress-ring" id="progress-ring"></div>
+    <div class="step-label" id="step-label">01 / 05</div>
+
+    <div class="ob-card-wrap">
+      <div class="ob-card fade-in" id="ob-card">
+        <div class="ob-icon" id="ob-icon"></div>
+        <h2 id="ob-title"></h2>
+        <p id="ob-body"></p>
+      </div>
+    </div>
+
+    <div class="ob-bottom">
+      <div class="dots" id="ob-dots"></div>
+      <button class="next-btn" id="btn-next">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div class="verify-overlay" id="verify-overlay">
+      <div class="spinner-ring"></div>
+      <div class="verify-text" id="verify-text">Locking geofence…</div>
+      <div class="verify-bar"><div class="fill" id="verify-fill"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ LOGIN / REGISTER ============ -->
+  <section class="screen" id="screen-auth">
+    <div class="auth-brand"><img src="icons/icon-192.png" alt="" /><span>GeoTend</span></div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" type="button">Log in</button>
+      <button class="auth-tab" id="tab-register" type="button">Register</button>
+    </div>
+
+    <form class="auth-form" id="form-login">
+      <div class="field">
+        <label for="li-email">UNILAG email</label>
+        <input id="li-email" type="email" placeholder="you@unilag.edu.ng" autocomplete="username" required />
+        <div class="field-hint" id="li-email-hint">&nbsp;</div>
+      </div>
+      <div class="field">
+        <label for="li-password">Password</label>
+        <input id="li-password" type="password" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <div class="auth-error" id="login-error">&nbsp;</div>
+      <button type="submit" class="btn-primary auth-submit" id="btn-login-submit">Log in →</button>
+    </form>
+
+    <form class="auth-form" id="form-register" style="display:none">
+      <div class="field">
+        <label for="rg-name">Full name</label>
+        <input id="rg-name" type="text" placeholder="Excellence Atode Samuel" autocomplete="name" required />
+      </div>
+      <div class="field">
+        <label for="rg-email">UNILAG email</label>
+        <input id="rg-email" type="email" placeholder="you@unilag.edu.ng" autocomplete="username" required />
+        <div class="field-hint" id="rg-email-hint">Registration is restricted to @unilag.edu.ng addresses.</div>
+      </div>
+      <div class="field">
+        <label for="rg-matric">Matric / staff ID</label>
+        <input id="rg-matric" type="text" placeholder="e.g. 240401234" autocomplete="off" required />
+      </div>
+      <div class="field">
+        <label>I am a</label>
+        <div class="role-toggle">
+          <button type="button" class="role-opt on" id="role-student" data-role="student">Student</button>
+          <button type="button" class="role-opt" id="role-teacher" data-role="teacher">Lecturer</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="rg-password">Password</label>
+        <input id="rg-password" type="password" placeholder="At least 8 characters" autocomplete="new-password" required />
+      </div>
+      <div class="field">
+        <label for="rg-password2">Confirm password</label>
+        <input id="rg-password2" type="password" placeholder="Repeat password" autocomplete="new-password" required />
+      </div>
+      <div class="auth-error" id="register-error">&nbsp;</div>
+      <button type="submit" class="btn-primary auth-submit" id="btn-register-submit">Create account →</button>
+    </form>
+
+    <p class="auth-foot">This device is currently pointed at a local mock of the GeoTend API —<br>see <code>CONFIG.API_BASE_URL</code> in the source to connect the real Django backend.</p>
+  </section>
+
+  <!-- ============ EMAIL VERIFICATION (mocked — no mail server) ============ -->
+  <section class="screen" id="screen-verify">
+    <div class="verify-mail-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#57C7FF" stroke-width="1.8"/><path d="M3 7l9 6 9-6" stroke="#57C7FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Confirm your email</h2>
+    <p class="sub">A verification link was sent to</p>
+    <p class="email-chip" id="verify-email-chip">—</p>
+    <p class="sub" style="margin-top:14px">On the real backend you'd tap that link. This build has no mail server, so here's a stand-in for it.</p>
+    <div class="dev-box">
+      <p>Dev-only — simulates the email link</p>
+      <button class="btn-primary" id="btn-simulate-verify" style="width:100%">Confirm email →</button>
+    </div>
+  </section>
+
+  <!-- ============ PIN SETUP / LOCK ============ -->
+  <section class="screen" id="screen-lock">
+    <div class="lock-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#57C7FF" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#57C7FF" stroke-width="1.8"/></svg>
+    </div>
+    <h2 id="lock-title">Create your PIN</h2>
+    <p class="sub" id="lock-sub">This PIN encrypts your attendance log on this device. GeoTend never sends it anywhere — there's no server to send it to.</p>
+    <div class="lock-error" id="lock-error">&nbsp;</div>
+    <div class="pin-dots" id="pin-dots"></div>
+    <div class="keypad" id="keypad"></div>
+  </section>
+
+  <!-- ============ MAIN APP ============ -->
+  <section class="screen" id="screen-app">
+    <div class="app-header">
+      <div class="who">
+        <img src="icons/icon-192.png" alt="" />
+        <div>
+          <div class="name" id="hdr-name">GeoTend</div>
+          <div class="role" id="hdr-role">—</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="icon-btn" id="btn-lock-app" title="Lock app">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="white" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="white" stroke-width="1.8"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-sign-out" title="Sign out">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="white" stroke-width="1.8" stroke-linecap="round"/><path d="M16 17l5-5-5-5M21 12H9" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="app-body">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Location check</div>
+          <div class="pill idle" id="geo-pill">NOT CHECKED</div>
+        </div>
+        <div class="geo-row"><span>Accuracy</span><span id="geo-accuracy">—</span></div>
+        <div class="geo-row"><span>Distance to geofence</span><span id="geo-distance">—</span></div>
+        <div class="geo-row"><span>Coordinates</span><span id="geo-coords">—</span></div>
+        <button class="btn-small" id="btn-check-geo">Check my location</button>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Check-in token</div>
+          <div class="pill ok">LIVE</div>
+        </div>
+        <div class="qr-wrap">
+          <div id="qr-box"></div>
+          <div class="qr-meta" id="qr-token">TOKEN —</div>
+          <div class="qr-countdown"><div class="fill" id="qr-fill"></div></div>
+        </div>
+        <button class="btn-small check-in" id="btn-checkin">Check in with this token</button>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Your attendance log</div>
+          <div class="pill idle">ENCRYPTED · LOCAL</div>
+        </div>
+        <div id="log-list"><div class="log-empty">No check-ins yet on this device.</div></div>
+      </div>
+
+      <div class="sec-note">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px"><path d="M12 3l7 3v6c0 4.4-3 8.4-7 9-4-.6-7-4.6-7-9V6l7-3z" stroke="#5B6B8C" stroke-width="1.6"/></svg>
+        <div>This build has no backend, so location and token checks are demonstrated entirely on-device. A production deployment would still need a server to countersign each check-in — otherwise a student could edit local storage. Your PIN, log, and location never leave this device either way.
+          <br><button class="reset-link" id="btn-reset">Reset this device</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- navigation ---------------- */
+  const screens = {
+    landing: document.getElementById('screen-landing'),
+    onboarding: document.getElementById('screen-onboarding'),
+    auth: document.getElementById('screen-auth'),
+    verify: document.getElementById('screen-verify'),
+    lock: document.getElementById('screen-lock'),
+    app: document.getElementById('screen-app')
+  };
+  function show(name){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  /* =================================================================
+     API LAYER — this is the ONLY place that needs to change to plug in
+     the real Django backend from the PRD (new-prd-omega.vercel.app).
+
+     Every method below mirrors the documented /api/v1 contract exactly:
+     request shape, response shape, and error format. Point CONFIG at
+     the real host and set USE_MOCK to false; nothing else in this file
+     has to move. Until then, MockBackend fakes the same contract using
+     localStorage so the app is fully usable with zero server.
+     ================================================================= */
+  const CONFIG = {
+    API_BASE_URL: null,      // e.g. 'https://api.geotend.ng/api/v1' — set this to go live.
+                              // Also update the connect-src in the <meta http-equiv="Content-Security-Policy">
+                              // tag in <head> to include that host, or the browser will block the requests.
+    UNILAG_DOMAIN: 'unilag.edu.ng'
+  };
+  const USE_MOCK = !CONFIG.API_BASE_URL;
+
+  function isUnilagEmail(email){
+    return new RegExp('@' + CONFIG.UNILAG_DOMAIN.replace('.', '\\.') + '$', 'i').test((email||'').trim());
+  }
+
+  async function sha256Hex(str){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  function randomId(len){
+    return Array.from(crypto.getRandomValues(new Uint8Array(len))).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  /* ---- Mock backend: same shapes as the Django/DRF spec, stored locally ---- */
+  const MockBackend = {
+    _users(){ try{ return JSON.parse(localStorage.getItem('geotend_users')||'[]'); } catch(e){ return []; } },
+    _saveUsers(u){ localStorage.setItem('geotend_users', JSON.stringify(u)); },
+    _pendingVerify(){ try{ return JSON.parse(localStorage.getItem('geotend_pending_verify')||'null'); } catch(e){ return null; } },
+
+    async register({ full_name, unilag_email, matric_or_staff_id, role, password }){
+      await delay(450);
+      if(!isUnilagEmail(unilag_email)) throw new Error(`Registration is restricted to @${CONFIG.UNILAG_DOMAIN} addresses.`);
+      if(password.length < 8) throw new Error('Password must be at least 8 characters.');
+      const users = this._users();
+      if(users.some(u => u.unilag_email.toLowerCase() === unilag_email.toLowerCase())){
+        throw new Error('An account with this email already exists.');
       }
-    </style>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+      const password_hash = await sha256Hex(password); // real backend: Argon2, server-side only
+      const user = {
+        id: randomId(8), unilag_email, full_name, matric_or_staff_id, role,
+        password_hash, is_verified: false, created_at: new Date().toISOString()
+      };
+      users.push(user); this._saveUsers(users);
+      const token = randomId(16);
+      localStorage.setItem('geotend_pending_verify', JSON.stringify({ email: unilag_email, token }));
+      return { message: 'Verification email sent.', email: unilag_email };
+    },
+
+    async verifyEmail(){
+      await delay(350);
+      const pending = this._pendingVerify();
+      if(!pending) throw new Error('Nothing to verify.');
+      const users = this._users();
+      const idx = users.findIndex(u => u.unilag_email === pending.email);
+      if(idx === -1) throw new Error('Account not found.');
+      users[idx].is_verified = true;
+      this._saveUsers(users);
+      localStorage.removeItem('geotend_pending_verify');
+      return { message: 'Email verified.' };
+    },
+
+    async login({ unilag_email, password }){
+      await delay(400);
+      const users = this._users();
+      const user = users.find(u => u.unilag_email.toLowerCase() === (unilag_email||'').toLowerCase());
+      if(!user) throw new Error('No account found with that email.');
+      const hash = await sha256Hex(password);
+      if(hash !== user.password_hash) throw new Error('Incorrect password.');
+      if(!user.is_verified) throw new Error('Please confirm your email before logging in.');
+      const access = randomId(16), refresh = randomId(16);
+      const session = {
+        access, refresh, expires_at: Date.now() + 15*60*1000,
+        user: { id:user.id, unilag_email:user.unilag_email, full_name:user.full_name, role:user.role, matric_or_staff_id:user.matric_or_staff_id }
+      };
+      localStorage.setItem('geotend_session_' + access, JSON.stringify(session));
+      localStorage.setItem('geotend_refresh', refresh);
+      localStorage.setItem('geotend_access', access);
+      return session;
+    },
+
+    async refresh(){
+      await delay(200);
+      const refresh = localStorage.getItem('geotend_refresh');
+      const access = localStorage.getItem('geotend_access');
+      if(!refresh || !access) throw new Error('No session to refresh.');
+      const raw = localStorage.getItem('geotend_session_' + access);
+      if(!raw) throw new Error('Session expired.');
+      const session = JSON.parse(raw);
+      // rotate: issue a new access token bound to the same user
+      const newAccess = randomId(16);
+      const newSession = { ...session, access: newAccess, expires_at: Date.now() + 15*60*1000 };
+      localStorage.removeItem('geotend_session_' + access);
+      localStorage.setItem('geotend_session_' + newAccess, JSON.stringify(newSession));
+      localStorage.setItem('geotend_access', newAccess);
+      return newSession;
+    },
+
+    async me(){
+      const access = localStorage.getItem('geotend_access');
+      if(!access) throw new Error('Not authenticated.');
+      const raw = localStorage.getItem('geotend_session_' + access);
+      if(!raw) throw new Error('Not authenticated.');
+      return JSON.parse(raw).user;
+    },
+
+    async logout(){
+      const access = localStorage.getItem('geotend_access');
+      if(access) localStorage.removeItem('geotend_session_' + access);
+      localStorage.removeItem('geotend_access');
+      localStorage.removeItem('geotend_refresh');
+    }
+  };
+
+  /* ---- Real backend: exact endpoints from the PRD's API Reference ---- */
+  const RealBackend = {
+    async _fetch(path, opts={}){
+      const access = localStorage.getItem('geotend_access');
+      const res = await fetch(CONFIG.API_BASE_URL + path, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(access ? { Authorization: 'Bearer ' + access } : {}),
+          ...(opts.headers || {})
+        }
+      });
+      const data = await res.json().catch(() => ({}));
+      if(!res.ok) throw new Error(data.detail || data.message || 'Request failed.');
+      return data;
+    },
+    register(body){ return this._fetch('/auth/register/', { method:'POST', body: JSON.stringify(body) }); },
+    verifyEmail(token){ return this._fetch('/auth/verify-email/', { method:'POST', body: JSON.stringify({ token }) }); },
+    async login(body){
+      const data = await this._fetch('/auth/login/', { method:'POST', body: JSON.stringify(body) });
+      localStorage.setItem('geotend_access', data.access);
+      localStorage.setItem('geotend_refresh', data.refresh);
+      return data;
+    },
+    async refresh(){
+      const refresh = localStorage.getItem('geotend_refresh');
+      const data = await this._fetch('/auth/refresh/', { method:'POST', body: JSON.stringify({ refresh }) });
+      localStorage.setItem('geotend_access', data.access);
+      return data;
+    },
+    me(){ return this._fetch('/auth/me/'); },
+    async logout(){
+      await this._fetch('/auth/logout/', { method:'POST' }).catch(() => {});
+      localStorage.removeItem('geotend_access');
+      localStorage.removeItem('geotend_refresh');
+    }
+  };
+
+  const API = USE_MOCK ? MockBackend : RealBackend;
+  let currentUser = null;
+
+  /* ---------------- onboarding data ---------------- */
+  const steps = [
+    {
+      tag: "01 / 05", label: "Welcome",
+      icon: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3l8 4v5c0 5-3.4 8.7-8 9.9C7.4 20.7 4 17 4 12V7l8-4z" stroke="#57C7FF" stroke-width="1.8"/><path d="M9 12l2 2 4-4" stroke="#57C7FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      title: "Attendance you can trust",
+      body: "GeoTend confirms you're really in class using your GPS position and a rotating QR code — no more signing the sheet for a coursemate who isn't there.",
+      verify: "Loading class roster…"
+    },
+    {
+      tag: "02 / 05", label: "Location",
+      icon: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.3 7-11.5A7 7 0 0 0 5 9.5C5 14.7 12 21 12 21z" stroke="#57C7FF" stroke-width="1.8"/><circle cx="12" cy="9.5" r="2.4" stroke="#57C7FF" stroke-width="1.8"/></svg>`,
+      title: "Your GPS proves you're in the hall",
+      body: "When class opens, GeoTend checks that your device sits inside the lecturer's geofence before it will let you check in at all.",
+      verify: "Locking geofence…"
+    },
+    {
+      tag: "03 / 05", label: "Scan",
+      icon: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.2" stroke="#57C7FF" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.2" stroke="#57C7FF" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.2" stroke="#57C7FF" stroke-width="1.8"/><path d="M14 14h3v3h-3zM19 19h2M17 21h2" stroke="#57C7FF" stroke-width="1.8"/></svg>`,
+      title: "Scan a code that expires fast",
+      body: "The lecturer's screen shows a QR token that rotates every few seconds, so a screenshot passed around from outside the room is useless by the time it's shared.",
+      verify: "Rotating token…"
+    },
+    {
+      tag: "04 / 05", label: "Record",
+      icon: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#57C7FF" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#57C7FF" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+      title: "A log only you can read",
+      body: "Every check-in is encrypted on your device with a key derived from your PIN. GeoTend can show it to you — no one else, including us, can.",
+      verify: "Encrypting record…"
+    },
+    {
+      tag: "05 / 05", label: "Privacy",
+      icon: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.4-3 8.4-7 9-4-.6-7-4.6-7-9V6l7-3z" stroke="#57C7FF" stroke-width="1.8"/></svg>`,
+      title: "Nothing leaves your phone",
+      body: "This build runs fully offline with no server: your location, your PIN, and your attendance log all stay on this device unless you choose to export them.",
+      verify: "Preparing your dashboard…"
+    }
+  ];
+
+  let step = 0;
+  const ring = document.getElementById('progress-ring');
+  const dotsWrap = document.getElementById('ob-dots');
+  steps.forEach(() => {
+    const seg = document.createElement('div'); seg.className='seg'; seg.innerHTML='<div class="fill"></div>';
+    ring.appendChild(seg);
+    const dot = document.createElement('i');
+    dotsWrap.appendChild(dot);
+  });
+
+  function renderStep(){
+    const s = steps[step];
+    document.getElementById('step-label').textContent = s.tag;
+    document.getElementById('ob-icon').innerHTML = s.icon;
+    document.getElementById('ob-title').textContent = s.title;
+    document.getElementById('ob-body').textContent = s.body;
+    const card = document.getElementById('ob-card');
+    card.classList.remove('fade-in'); void card.offsetWidth; card.classList.add('fade-in');
+
+    [...ring.children].forEach((seg, i) => seg.classList.toggle('done', i <= step));
+    [...dotsWrap.children].forEach((d, i) => d.classList.toggle('on', i === step));
+
+    const btn = document.getElementById('btn-next');
+    if(step === steps.length - 1){
+      btn.classList.add('wide');
+      btn.innerHTML = 'Get started <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    } else {
+      btn.classList.remove('wide');
+      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+  }
+  renderStep();
+
+  const overlay = document.getElementById('verify-overlay');
+  const verifyText = document.getElementById('verify-text');
+  const verifyFill = document.getElementById('verify-fill');
+  let advancing = false;
+
+  document.getElementById('btn-next').addEventListener('click', () => {
+    if(advancing) return;
+    advancing = true;
+    verifyText.textContent = steps[step].verify;
+    verifyFill.classList.remove('animate'); void verifyFill.offsetWidth; verifyFill.classList.add('animate');
+    overlay.classList.add('show');
+
+    setTimeout(() => {
+      overlay.classList.remove('show');
+      advancing = false;
+      if(step === steps.length - 1){
+        goToAuth();
+      } else {
+        step++;
+        renderStep();
+      }
+    }, 5000);
+  });
+
+  document.getElementById('btn-skip-2').addEventListener('click', () => goToAuth());
+  document.getElementById('btn-get-started').addEventListener('click', () => { show('onboarding'); });
+  document.getElementById('btn-skip-onboarding').addEventListener('click', () => goToAuth());
+
+  /* ---------------- goToAuth: resume session silently if we have one ---------------- */
+  async function goToAuth(){
+    const refresh = localStorage.getItem('geotend_refresh');
+    if(refresh){
+      try{
+        await API.refresh();
+        currentUser = await API.me();
+        goToLock(true);
+        return;
+      } catch(e){ /* stale session — fall through to login */ }
+    }
+    setAuthError('login', '');
+    setAuthError('register', '');
+    show('auth');
+  }
+
+  /* ---------------- crypto helpers (Web Crypto, on-device only) ---------------- */
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  function b64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+  function unb64(str){ return Uint8Array.from(atob(str), c => c.charCodeAt(0)).buffer; }
+  function randomBytes(n){ return crypto.getRandomValues(new Uint8Array(n)); }
+
+  async function deriveKey(pin, saltB64){
+    const salt = saltB64 ? new Uint8Array(unb64(saltB64)) : randomBytes(16);
+    const baseKey = await crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey(
+      { name:'PBKDF2', salt, iterations:150000, hash:'SHA-256' },
+      baseKey, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+    );
+    return { key, saltB64: b64(salt) };
+  }
+
+  async function encryptJSON(key, obj){
+    const iv = randomBytes(12);
+    const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc.encode(JSON.stringify(obj)));
+    return { iv: b64(iv), ct: b64(ct) };
+  }
+  async function decryptJSON(key, rec){
+    const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:new Uint8Array(unb64(rec.iv))}, key, unb64(rec.ct));
+    return JSON.parse(dec.decode(pt));
+  }
+
+  let sessionKey = null; // held only in memory, never persisted
+
+  /* ---------------- PIN setup / unlock ---------------- */
+  const PIN_LEN = 4;
+  let pinBuffer = '';
+  let confirmBuffer = null; // holds first entry while confirming
+  let mode = 'setup'; // 'setup' | 'confirm' | 'unlock'
+
+  const pinDotsWrap = document.getElementById('pin-dots');
+  const keypad = document.getElementById('keypad');
+  const lockTitle = document.getElementById('lock-title');
+  const lockSub = document.getElementById('lock-sub');
+  const lockError = document.getElementById('lock-error');
+
+  function buildKeypad(){
+    keypad.innerHTML = '';
+    const layout = ['1','2','3','4','5','6','7','8','9','','0','del'];
+    layout.forEach(k => {
+      const b = document.createElement('button');
+      if(k === ''){ b.className='key ghost'; b.disabled = true; }
+      else if(k === 'del'){ b.className='key ghost'; b.textContent = '⌫'; b.addEventListener('click', onDel); }
+      else { b.className='key'; b.textContent = k; b.addEventListener('click', () => onDigit(k)); }
+      keypad.appendChild(b);
+    });
+  }
+  buildKeypad();
+
+  function renderPinDots(){
+    pinDotsWrap.innerHTML = '';
+    for(let i=0;i<PIN_LEN;i++){
+      const d = document.createElement('i');
+      if(i < pinBuffer.length) d.classList.add('filled');
+      pinDotsWrap.appendChild(d);
+    }
+  }
+  renderPinDots();
+
+  function onDigit(k){
+    if(pinBuffer.length >= PIN_LEN) return;
+    pinBuffer += k;
+    renderPinDots();
+    lockError.textContent = '\u00A0';
+    if(pinBuffer.length === PIN_LEN) setTimeout(handlePinComplete, 150);
+  }
+  function onDel(){
+    pinBuffer = pinBuffer.slice(0, -1);
+    renderPinDots();
+  }
+
+  async function handlePinComplete(){
+    if(mode === 'setup'){
+      confirmBuffer = pinBuffer; pinBuffer = ''; renderPinDots();
+      mode = 'confirm';
+      lockTitle.textContent = 'Confirm your PIN';
+      lockSub.textContent = 'Enter it once more so we know it was typed correctly.';
+    } else if(mode === 'confirm'){
+      if(pinBuffer !== confirmBuffer){
+        lockError.textContent = "PINs didn't match — try again";
+        pinBuffer=''; confirmBuffer=null; renderPinDots();
+        mode='setup';
+        lockTitle.textContent = 'Create your PIN';
+        lockSub.textContent = "This PIN encrypts your attendance log on this device. GeoTend never sends it anywhere — there's no server to send it to.";
+        return;
+      }
+      const { key, saltB64 } = await deriveKey(pinBuffer, null);
+      // store only a verifier hash (never the PIN, never the key)
+      const verifier = await crypto.subtle.digest('SHA-256', enc.encode(saltB64 + ':' + pinBuffer));
+      localStorage.setItem(uKey('salt'), saltB64);
+      localStorage.setItem(uKey('verifier'), b64(verifier));
+      sessionKey = key;
+      pinBuffer=''; confirmBuffer=null; renderPinDots();
+      enterApp();
+    } else if(mode === 'unlock'){
+      const saltB64 = localStorage.getItem(uKey('salt'));
+      const storedVerifier = localStorage.getItem(uKey('verifier'));
+      const verifier = b64(await crypto.subtle.digest('SHA-256', enc.encode(saltB64 + ':' + pinBuffer)));
+      if(verifier !== storedVerifier){
+        lockError.textContent = 'Incorrect PIN — try again';
+        pinBuffer=''; renderPinDots();
+        return;
+      }
+      const { key } = await deriveKey(pinBuffer, saltB64);
+      sessionKey = key;
+      pinBuffer=''; renderPinDots();
+      enterApp();
+    }
+  }
+
+  function uKey(name){
+    return 'geotend_' + name + '_' + ((currentUser && currentUser.id) || 'guest');
+  }
+
+  function goToLock(fromOnboarding){
+    const hasPin = !!localStorage.getItem(uKey('verifier'));
+    pinBuffer=''; confirmBuffer=null; renderPinDots(); lockError.textContent='\u00A0';
+    if(hasPin){
+      mode = 'unlock';
+      lockTitle.textContent = 'Enter your PIN';
+      lockSub.textContent = 'Unlock GeoTend to view your check-in status and attendance log.';
+    } else {
+      mode = 'setup';
+      lockTitle.textContent = 'Create your PIN';
+      lockSub.textContent = "This PIN encrypts your attendance log on this device. GeoTend never sends it anywhere — there's no server to send it to.";
+    }
+    show('lock');
+  }
+
+  document.getElementById('btn-lock-app').addEventListener('click', () => {
+    sessionKey = null;
+    goToLock(false);
+  });
+
+  /* ---------------- main app: geofence ---------------- */
+  // Demo geofence centered on UNILAG main campus, Akoka, Lagos.
+  const CAMPUS = { lat: 6.5158, lng: 3.3898, radiusM: 400 };
+
+  function haversine(lat1, lon1, lat2, lon2){
+    const R = 6371000;
+    const toRad = d => d * Math.PI/180;
+    const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  let lastGeoOk = false;
+
+  document.getElementById('btn-check-geo').addEventListener('click', () => {
+    const pill = document.getElementById('geo-pill');
+    pill.className = 'pill idle'; pill.textContent = 'CHECKING…';
+    if(!navigator.geolocation){
+      pill.className='pill bad'; pill.textContent='UNSUPPORTED';
+      return;
+    }
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      const dist = haversine(latitude, longitude, CAMPUS.lat, CAMPUS.lng);
+      document.getElementById('geo-accuracy').textContent = Math.round(accuracy) + ' m';
+      document.getElementById('geo-coords').textContent = latitude.toFixed(4) + ', ' + longitude.toFixed(4);
+      document.getElementById('geo-distance').textContent = Math.round(dist) + ' m from geofence centre';
+      lastGeoOk = dist <= CAMPUS.radiusM;
+      pill.className = 'pill ' + (lastGeoOk ? 'ok' : 'bad');
+      pill.textContent = lastGeoOk ? 'INSIDE GEOFENCE' : 'OUTSIDE GEOFENCE';
+      document.getElementById('btn-checkin').disabled = !lastGeoOk;
+    }, (err) => {
+      pill.className='pill bad'; pill.textContent = 'LOCATION DENIED';
+      document.getElementById('geo-accuracy').textContent = '—';
+      document.getElementById('geo-distance').textContent = '—';
+    }, { enableHighAccuracy:true, timeout:10000 });
+  });
+
+  /* ---------------- rotating QR token ---------------- */
+  let qrInstance = null;
+  let currentToken = null;
+  let tokenExpiry = 0;
+  const TOKEN_LIFETIME = 20000;
+
+  function newToken(){
+    const raw = b64(randomBytes(9)).replace(/[+/=]/g,'').slice(0,12).toUpperCase();
+    currentToken = raw;
+    tokenExpiry = Date.now() + TOKEN_LIFETIME;
+    const payload = JSON.stringify({ t: raw, ts: Date.now(), course:'GET102', exp: tokenExpiry });
+    const box = document.getElementById('qr-box');
+    box.innerHTML = '';
+    if(window.QRCode){
+      qrInstance = new QRCode(box, { text: payload, width:134, height:134, colorDark:'#0B1730', colorLight:'#ffffff' });
+    } else {
+      box.textContent = raw;
+    }
+    document.getElementById('qr-token').textContent = 'TOKEN ' + raw;
+  }
+
+  function tickQr(){
+    if(!currentToken) return;
+    const remaining = Math.max(0, tokenExpiry - Date.now());
+    const pct = (remaining / TOKEN_LIFETIME) * 100;
+    document.getElementById('qr-fill').style.width = pct + '%';
+    if(remaining <= 0) newToken();
+  }
+  setInterval(tickQr, 200);
+
+  /* ---------------- attendance log (encrypted at rest) ---------------- */
+  function getRawLog(){
+    try{ return JSON.parse(localStorage.getItem(uKey('log')) || '[]'); } catch(e){ return []; }
+  }
+  function setRawLog(arr){ localStorage.setItem(uKey('log'), JSON.stringify(arr)); }
+
+  async function renderLog(){
+    const list = document.getElementById('log-list');
+    const raw = getRawLog();
+    if(!raw.length || !sessionKey){
+      list.innerHTML = '<div class="log-empty">No check-ins yet on this device.</div>';
+      return;
+    }
+    list.innerHTML = '';
+    for(let i = raw.length - 1; i >= 0; i--){
+      try{
+        const entry = await decryptJSON(sessionKey, raw[i]);
+        const row = document.createElement('div');
+        row.className = 'log-item';
+        const d = new Date(entry.ts);
+        row.innerHTML = `<span>${entry.course} · token ${entry.token}</span><span class="t">${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>`;
+        list.appendChild(row);
+      } catch(e){ /* entry from a different PIN — skip silently */ }
+    }
+    if(!list.children.length) list.innerHTML = '<div class="log-empty">No check-ins yet on this device.</div>';
+  }
+
+  document.getElementById('btn-checkin').addEventListener('click', async () => {
+    if(!lastGeoOk || !sessionKey || !currentToken) return;
+    const btn = document.getElementById('btn-checkin');
+    btn.disabled = true; btn.textContent = 'Checking in…';
+    const record = await encryptJSON(sessionKey, { course:'GET102', token: currentToken, ts: Date.now() });
+    const raw = getRawLog(); raw.push(record); setRawLog(raw);
+    await renderLog();
+    btn.textContent = 'Checked in ✓';
+    setTimeout(() => { btn.textContent = 'Check in with this token'; btn.disabled = !lastGeoOk; }, 1600);
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    if(!confirm('This clears your PIN and attendance log from this device. Continue?')) return;
+    localStorage.removeItem(uKey('salt'));
+    localStorage.removeItem(uKey('verifier'));
+    localStorage.removeItem(uKey('log'));
+    sessionKey = null;
+    location.reload();
+  });
+
+  document.getElementById('btn-sign-out').addEventListener('click', async () => {
+    await API.logout();
+    currentUser = null;
+    sessionKey = null;
+    show('landing');
+  });
+
+  function enterApp(){
+    show('app');
+    if(currentUser){
+      document.getElementById('hdr-name').textContent = currentUser.full_name || 'GeoTend';
+      document.getElementById('hdr-role').textContent =
+        (currentUser.role === 'teacher' ? 'Lecturer' : 'Student') + ' · ' + (currentUser.unilag_email || '');
+    }
+    newToken();
+    renderLog();
+  }
+
+  /* ---------------- auth screen wiring ---------------- */
+  function setAuthError(which, msg){
+    document.getElementById(which + '-error').textContent = msg || '\u00A0';
+  }
+
+  const tabLogin = document.getElementById('tab-login');
+  const tabRegister = document.getElementById('tab-register');
+  const formLogin = document.getElementById('form-login');
+  const formRegister = document.getElementById('form-register');
+
+  tabLogin.addEventListener('click', () => {
+    tabLogin.classList.add('active'); tabRegister.classList.remove('active');
+    formLogin.style.display = 'flex'; formRegister.style.display = 'none';
+  });
+  tabRegister.addEventListener('click', () => {
+    tabRegister.classList.add('active'); tabLogin.classList.remove('active');
+    formRegister.style.display = 'flex'; formLogin.style.display = 'none';
+  });
+
+  let registerRole = 'student';
+  document.getElementById('role-student').addEventListener('click', () => setRole('student'));
+  document.getElementById('role-teacher').addEventListener('click', () => setRole('teacher'));
+  function setRole(role){
+    registerRole = role;
+    document.getElementById('role-student').classList.toggle('on', role === 'student');
+    document.getElementById('role-teacher').classList.toggle('on', role === 'teacher');
+  }
+
+  const liEmail = document.getElementById('li-email');
+  liEmail.addEventListener('blur', () => {
+    const hint = document.getElementById('li-email-hint');
+    if(liEmail.value && !isUnilagEmail(liEmail.value)){
+      hint.textContent = `Use your @${CONFIG.UNILAG_DOMAIN} address.`;
+      hint.classList.add('err');
+    } else { hint.textContent = '\u00A0'; hint.classList.remove('err'); }
+  });
+  const rgEmail = document.getElementById('rg-email');
+  rgEmail.addEventListener('blur', () => {
+    const hint = document.getElementById('rg-email-hint');
+    if(rgEmail.value && !isUnilagEmail(rgEmail.value)){
+      hint.textContent = `Registration is restricted to @${CONFIG.UNILAG_DOMAIN} addresses.`;
+      hint.classList.add('err');
+    } else {
+      hint.textContent = `Registration is restricted to @${CONFIG.UNILAG_DOMAIN} addresses.`;
+      hint.classList.remove('err');
+    }
+  });
+
+  formLogin.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setAuthError('login', '');
+    const email = document.getElementById('li-email').value.trim();
+    const password = document.getElementById('li-password').value;
+    if(!isUnilagEmail(email)){ setAuthError('login', `Use your @${CONFIG.UNILAG_DOMAIN} address.`); return; }
+    const btn = document.getElementById('btn-login-submit');
+    btn.classList.add('loading'); btn.textContent = 'Logging in…';
+    try{
+      await API.login({ unilag_email: email, password });
+      currentUser = await API.me();
+      goToLock(false);
+    } catch(err){
+      setAuthError('login', err.message || 'Login failed.');
+    } finally {
+      btn.classList.remove('loading'); btn.textContent = 'Log in →';
+    }
+  });
+
+  let lastRegisteredEmail = '';
+  formRegister.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setAuthError('register', '');
+    const full_name = document.getElementById('rg-name').value.trim();
+    const unilag_email = document.getElementById('rg-email').value.trim();
+    const matric_or_staff_id = document.getElementById('rg-matric').value.trim();
+    const password = document.getElementById('rg-password').value;
+    const password2 = document.getElementById('rg-password2').value;
+    if(!isUnilagEmail(unilag_email)){ setAuthError('register', `Use your @${CONFIG.UNILAG_DOMAIN} address.`); return; }
+    if(password !== password2){ setAuthError('register', "Passwords don't match."); return; }
+    if(password.length < 8){ setAuthError('register', 'Password must be at least 8 characters.'); return; }
+    const btn = document.getElementById('btn-register-submit');
+    btn.classList.add('loading'); btn.textContent = 'Creating account…';
+    try{
+      await API.register({ full_name, unilag_email, matric_or_staff_id, role: registerRole, password });
+      lastRegisteredEmail = unilag_email;
+      document.getElementById('verify-email-chip').textContent = unilag_email;
+      show('verify');
+    } catch(err){
+      setAuthError('register', err.message || 'Registration failed.');
+    } finally {
+      btn.classList.remove('loading'); btn.textContent = 'Create account →';
+    }
+  });
+
+  document.getElementById('btn-simulate-verify').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-simulate-verify');
+    btn.classList.add('loading'); btn.textContent = 'Confirming…';
+    try{
+      await API.verifyEmail(lastRegisteredEmail);
+      // auto-fill the login form and switch to it so the flow ends somewhere familiar
+      document.getElementById('li-email').value = lastRegisteredEmail;
+      tabLogin.click();
+      setAuthError('login', '');
+      show('auth');
+      document.getElementById('li-password').focus();
+    } catch(err){
+      alert(err.message || 'Verification failed.');
+    } finally {
+      btn.classList.remove('loading'); btn.textContent = 'Confirm email →';
+    }
+  });
+
+  /* ---------------- boot ---------------- */
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
+})();
+</script>
+</body>
 </html>
