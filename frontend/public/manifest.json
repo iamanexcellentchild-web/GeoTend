@@ -1,70 +1,16 @@
 {
-  "name": "GeoTend - Attendance Experience",
+  "name": "GeoTend — Verified Attendance",
   "short_name": "GeoTend",
-  "description": "Smart location-based attendance tracking system. Built by The Game Changers",
-  "start_url": "/",
-  "scope": "/",
+  "description": "GPS-verified, QR-authenticated attendance for UNILAG classes.",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0f172a",
-  "theme_color": "#14b8a6",
-  "categories": ["education", "productivity"],
-  "screenshots": [
-    {
-      "src": "/logo.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "form_factor": "narrow",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "form_factor": "wide",
-      "purpose": "any"
-    }
-  ],
+  "background_color": "#0B1730",
+  "theme_color": "#0B1730",
   "icons": [
-    {
-      "src": "/logo.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/logo.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Join Session",
-      "short_name": "Join",
-      "description": "Join an attendance session",
-      "url": "/student/join",
-      "icons": [
-        {
-          "src": "/logo.svg",
-          "sizes": "192x192",
-          "type": "image/svg+xml"
-        }
-      ]
-    }
-  ],
-  "prefer_related_applications": false
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }
